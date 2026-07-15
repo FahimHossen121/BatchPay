@@ -49,18 +49,21 @@ Per Smart Contract Design §2.3, `SafeERC20` handles non-bool-returning tokens (
 
 **Action item:** the frontend must clearly communicate this limitation to users before they select a token — this cannot be a purely backend-documented limitation, since the contract has no way to detect these token types itself.
 
-## 6. Re-entrancy Analysis (preliminary)
+## 6. Re-entrancy Analysis — VERIFIED
 
-The loop in `airdropERC20` makes an external call (`safeTransferFrom`) once per recipient, inside a loop, before the function completes. This is a standard "external call in a loop" pattern worth scrutinizing:
+**Status: verified via adversarial test (`test_ReentrancyAttempt_RevertsEntireTransaction`), passing.**
 
-- Because BatchPay never holds a balance and has no state that could be exploited via re-entrancy (no storage variables at all, in fact — the contract is fully stateless besides events), a classic re-entrancy attack (drain contract balance via reentrant calls) has no target to hit. There's nothing to steal from BatchPay itself.
-- However, if a malicious *token* contract were used (see Section 5, transfer hooks), a reentrant call back into `airdropERC20` itself, or into some other function, isn't currently analyzed for second-order effects (e.g., could a malicious token manipulate `msg.sender`'s own state in a way that affects a subsequent transfer within the same loop?). Given the contract's statelessness, this is currently believed low-risk, but "believed" is not "proven" — this needs a dedicated adversarial test with a malicious mock token before it can be marked verified.
+Tested with a malicious `ReentrantERC20` mock whose `transferFrom` attempts to call back into `airdropERC20` mid-transfer, trying to trigger a second nested distribution before the first completes.
 
-**Status: unverified — flagged for follow-up, not yet tested.**
+**Finding:** the attack structurally cannot succeed, for a specific reason worth recording precisely. When the malicious token's `transferFrom` re-enters `airdropERC20`, the reentrant call's `msg.sender` is the *token contract itself* (Solidity does not allow a contract to spoof `msg.sender` on an outgoing call — it is always the actual caller). Since BatchPay always sources funds from `msg.sender`, the reentrant call can only ever attempt to pull funds "as the token contract," which never has any allowance of its own. The nested call reverts on insufficient allowance, which propagates up and reverts the entire outer transaction (Solidity's default unhandled-external-call-failure behavior). Confirmed empirically: after the attack attempt, `alice`'s and `sender`'s balances are unchanged — full atomicity held, no partial state.
+
+**Why this holds in general, not just for this test case:** the property isn't "this particular attack failed" — it's that BatchPay's use of `msg.sender` as the sole funds source means a reentrant call from within a malicious token can never impersonate the original caller. Classic reentrancy exploits rely on being able to act as the victim; that avenue is structurally unavailable here regardless of what the malicious token's code does. Combined with the contract holding no storage state at all, there is no state to corrupt and no way to spend someone else's allowance via re-entrancy.
+
+**Residual risk (not fund-safety, worth noting):** a malicious or non-standard token whose `transferFrom` always attempts something like this would cause its *own* distributions to always revert. This only harms users who choose to distribute that specific malicious token — it has no effect on BatchPay's safety for other tokens or other users. Filed as a known limitation, not a vulnerability.
 
 ## 7. Open Items / Follow-Up Test Coverage Needed
 
-- [ ] Adversarial test: a malicious ERC20 mock that attempts re-entrancy during `transferFrom`, to empirically confirm Section 6's reasoning.
+- [x] Adversarial test: a malicious ERC20 mock that attempts re-entrancy during `transferFrom` — verified, see Section 6.
 - [ ] Test behavior against a fee-on-transfer mock token — confirm it doesn't fail in a fund-unsafe way (reverting is fine; silently misreporting amounts is not).
 - [ ] Decide whether `amounts[i] == 0` handling needs an explicit test (currently implicitly covered by fuzzing, but no dedicated named test asserts this behavior).
 - [ ] Consider whether the `Airdropped` event's `totalAmount` should be documented as "amount authorized," not "amount received," given Section 5's limitations.
@@ -69,3 +72,4 @@ The loop in `airdropERC20` makes an external call (`safeTransferFrom`) once per 
 ## 8. Change Log
 
 - **v1.0** — Initial pass, written after test suite completion (12 tests: happy path, 4 validation reverts, 2 implicit-enforcement reverts, fuzz, gas benchmarks). No adversarial/malicious-token testing performed yet.
+- **v1.1** — Added adversarial re-entrancy test (13th test). Section 6 upgraded from "unverified" to "verified": confirmed the contract's `msg.sender`-sourced funding model structurally prevents a malicious token from impersonating the original caller via re-entrancy, so any such attempt reverts the whole transaction atomically rather than corrupting state or leaking funds.
