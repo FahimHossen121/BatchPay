@@ -13,6 +13,46 @@ contract MockERC20 is ERC20 {
     }
 }
 
+contract ReentrantERC20 is ERC20 {
+    BatchPay public target;
+    address[] internal reentryRecipients;
+    uint256[] internal reentryAmounts;
+    bool internal attacking;
+
+    constructor() ERC20("Reentrant Token", "REENT") {}
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function setAttack(
+        BatchPay _target,
+        address[] memory _recipients,
+        uint256[] memory _amounts
+    ) external {
+        target = _target;
+        reentryRecipients = _recipients;
+        reentryAmounts = _amounts;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override returns (bool) {
+        if (!attacking && address(target) != address(0)) {
+            attacking = true;
+            target.airdropERC20(
+                address(this),
+                reentryRecipients,
+                reentryAmounts
+            );
+            attacking = false;
+        }
+        return super.transferFrom(from, to, amount);
+    }
+}
+
 contract BatchPayTest is Test {
     BatchPay public batchPay;
     MockERC20 public token;
@@ -185,5 +225,28 @@ contract BatchPayTest is Test {
         token.approve(address(batchPay), count * 1 ether);
         batchPay.airdropERC20(address(token), recipients, amounts);
         vm.stopPrank();
+    }
+
+    function test_ReentrancyAttempt_RevertsEntireTransaction() public {
+        ReentrantERC20 evilToken = new ReentrantERC20();
+        evilToken.mint(sender, 1_000 ether);
+
+        address[] memory recipients = new address[](1);
+        recipients[0] = alice;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 50 ether;
+
+        evilToken.setAttack(batchPay, recipients, amounts);
+
+        vm.startPrank(sender);
+        evilToken.approve(address(batchPay), 1_000 ether);
+
+        vm.expectRevert();
+        batchPay.airdropERC20(address(evilToken), recipients, amounts);
+        vm.stopPrank();
+
+        // Nothing should have moved — the whole transaction reverted atomically
+        assertEq(evilToken.balanceOf(alice), 0);
+        assertEq(evilToken.balanceOf(sender), 1_000 ether);
     }
 }
