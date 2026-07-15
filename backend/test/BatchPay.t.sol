@@ -119,4 +119,38 @@ contract BatchPayTest is Test {
         batchPay.airdropERC20(address(token), recipients, amounts);
         vm.stopPrank();
     }
+
+    function testFuzz_AirdropERC20_HappyPath(
+        uint8 recipientCount,
+        uint256 amountSeed
+    ) public {
+        uint256 count = bound(recipientCount, 1, 50);
+
+        address[] memory recipients = new address[](count);
+        uint256[] memory amounts = new uint256[](count);
+
+        uint256 totalAmount;
+
+        for (uint256 i = 0; i < count; i++) {
+            recipients[i] = makeAddr(string(abi.encodePacked("recipient", i)));
+            uint256 amount = bound(
+                uint256(keccak256(abi.encode(amountSeed, i))),
+                1,
+                1_000 ether
+            );
+            amounts[i] = amount;
+            totalAmount += amount;
+        }
+
+        token.mint(sender, totalAmount);
+
+        vm.startPrank(sender);
+        token.approve(address(batchPay), totalAmount);
+        batchPay.airdropERC20(address(token), recipients, amounts);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < count; i++) {
+            assertEq(token.balanceOf(recipients[i]), amounts[i]);
+        }
+    }
 }
