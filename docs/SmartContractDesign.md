@@ -101,11 +101,23 @@ Carried forward from the PRD/Architecture docs, restated at the contract level f
 - No access control / ownership (the contract has no privileged functions — it is a pure relay, callable by anyone, for their own tokens only).
 - No pause mechanism, no upgradability — v1 is a simple, immutable contract by design, consistent with minimizing trust assumptions.
 
-## 8. Next Steps
+## 9. Gas Benchmark (updated, optimizer enabled)
 
-With this design settled, implementation order should be:
-1. Write the contract (`src/BatchPay.sol`) implementing exactly this interface.
-2. Write unit tests for each validation rule (one test per revert condition).
-3. Write a happy-path test (multiple recipients, correct balances after).
-4. Write fuzz tests for array lengths / amounts.
-5. Gas-benchmark the happy path as a baseline for future comparison against a v2 optimized variant.
+Original benchmark figures in earlier revisions of this document were measured before `solc_version` was pinned and the optimizer was enabled in `foundry.toml` (see Security.md changelog, and the independent audit that flagged this gap). Current, reproducible figures — Solc 0.8.35, `optimizer = true`, `optimizer_runs = 200`:
+
+| Recipients | Gas |
+|---|---|
+| 1 | 58,400 |
+| 5 | 174,437 |
+| 10 | 319,603 |
+| 50 | 1,480,874 |
+
+Marginal cost per recipient is approximately 28,900 gas, with roughly 29,500 gas fixed overhead per call — both meaningfully lower than the pre-optimization baseline (~31,560/recipient, ~31,500 fixed). This is the current baseline for comparing any future gas-optimized (v2) variant.
+
+## 10. Next Steps (completed items retained for history)
+
+1. ✅ Write the contract (`src/BatchPay.sol`) implementing exactly this interface.
+2. ✅ Write unit tests for each validation rule (one test per revert condition).
+3. ✅ Write a happy-path test (multiple recipients, correct balances after).
+4. ✅ Write fuzz tests for array lengths / amounts.
+5. ✅ Gas-benchmark the happy path as a baseline (see Section 9, updated post-optimizer-fix).
