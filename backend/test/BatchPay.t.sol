@@ -98,6 +98,32 @@ contract SelfApprovingReentrantERC20 is ERC20 {
     }
 }
 
+contract FailingERC20 is ERC20 {
+    address public blockedRecipient;
+
+    constructor() ERC20("Failing Token", "FAIL") {}
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function setBlockedRecipient(address recipient) external {
+        blockedRecipient = recipient;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override returns (bool) {
+        require(
+            to != blockedRecipient,
+            "FailingERC20: transfer to blocked recipient"
+        );
+        return super.transferFrom(from, to, amount);
+    }
+}
+
 contract BatchPayTest is Test {
     BatchPay public batchPay;
     MockERC20 public token;
@@ -338,5 +364,41 @@ contract BatchPayTest is Test {
             evilToken.allowance(sender, address(batchPay)),
             1_000 ether - 50 ether
         );
+    }
+
+    function test_RevertWhen_LaterRecipientTransferFails_RevertsEntireBatch()
+        public
+    {
+        FailingERC20 failToken = new FailingERC20();
+        failToken.mint(sender, 1_000 ether);
+
+        address[] memory recipients = new address[](3);
+        recipients[0] = alice;
+        recipients[1] = bob;
+        recipients[2] = makeAddr("charlie");
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 10 ether;
+        amounts[1] = 20 ether;
+        amounts[2] = 30 ether;
+
+        // Block the LAST recipient specifically — this proves that even after
+        // two transfers have already succeeded within the loop, a failure on
+        // the third still rolls back everything, including the first two.
+        failToken.setBlockedRecipient(recipients[2]);
+
+        vm.startPrank(sender);
+        failToken.approve(address(batchPay), 1_000 ether);
+
+        vm.expectRevert();
+        batchPay.airdropERC20(address(failToken), recipients, amounts);
+        vm.stopPrank();
+
+        // Nothing should have moved — not even the two transfers that
+        // "succeeded" before the loop hit the failing one.
+        assertEq(failToken.balanceOf(alice), 0);
+        assertEq(failToken.balanceOf(bob), 0);
+        assertEq(failToken.balanceOf(recipients[2]), 0);
+        assertEq(failToken.balanceOf(sender), 1_000 ether);
     }
 }

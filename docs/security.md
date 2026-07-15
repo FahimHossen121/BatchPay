@@ -2,7 +2,7 @@
 
 **Version:** 1.0 (living document — update as the project evolves)
 **Status:** Initial pass, post-implementation
-**Scope:** `src/BatchPay.sol` as implemented and tested (14 passing tests: happy path, 4 validation reverts, 2 implicit ERC20-enforcement reverts, fuzz, gas benchmarks, 2 adversarial re-entrancy tests)
+**Scope:** `src/BatchPay.sol` as implemented and tested (15 passing tests: happy path, 4 validation reverts, 2 implicit ERC20-enforcement reverts, fuzz, gas benchmarks, 2 adversarial re-entrancy tests, 1 atomicity/rollback test)
 
 ## 1. Purpose
 
@@ -68,7 +68,7 @@ Per Smart Contract Design §2.3, `SafeERC20` handles non-bool-returning tokens (
 ## 7. Open Items / Follow-Up Test Coverage Needed
 
 - [x] Adversarial test: a malicious ERC20 mock that attempts re-entrancy during `transferFrom` — verified, see Section 6 (corrected via independent audit finding — see Section 8's v1.2 entry).
-- [ ] Atomic rollback test: confirm a later recipient's failed transfer reverts the entire batch, including earlier successful transfers within the same call.
+- [x] Atomic rollback test: confirm a later recipient's failed transfer reverts the entire batch, including earlier successful transfers within the same call — verified via `test_RevertWhen_LaterRecipientTransferFails_RevertsEntireBatch`, see Section 8's v1.3 entry.
 - [ ] Test behavior against a fee-on-transfer mock token — confirm it doesn't fail in a fund-unsafe way (reverting is fine; silently misreporting amounts is not). Note: this is a known, documented v1 scope cut (Section 5), not a newly discovered gap — but remains untested.
 - [ ] Decide whether `amounts[i] == 0` handling needs an explicit test (currently implicitly covered by fuzzing, but no dedicated named test asserts this behavior).
 - [ ] Consider whether the `Airdropped` event's `totalAmount` should be documented as "amount authorized," not "amount received," given Section 5's limitations.
