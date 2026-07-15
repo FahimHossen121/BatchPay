@@ -153,4 +153,37 @@ contract BatchPayTest is Test {
             assertEq(token.balanceOf(recipients[i]), amounts[i]);
         }
     }
+
+    function test_Gas_Airdrop_1Recipient() public {
+        _runGasBenchmark(1);
+    }
+
+    function test_Gas_Airdrop_5Recipients() public {
+        _runGasBenchmark(5);
+    }
+
+    function test_Gas_Airdrop_10Recipients() public {
+        _runGasBenchmark(10);
+    }
+
+    function test_Gas_Airdrop_50Recipients() public {
+        _runGasBenchmark(50);
+    }
+
+    function _runGasBenchmark(uint256 count) internal {
+        address[] memory recipients = new address[](count);
+        uint256[] memory amounts = new uint256[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            recipients[i] = makeAddr(
+                string(abi.encodePacked("gasRecipient", i))
+            );
+            amounts[i] = 1 ether;
+        }
+
+        vm.startPrank(sender);
+        token.approve(address(batchPay), count * 1 ether);
+        batchPay.airdropERC20(address(token), recipients, amounts);
+        vm.stopPrank();
+    }
 }
