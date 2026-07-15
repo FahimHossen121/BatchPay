@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useReadContracts } from 'wagmi';
 import { isAddress } from 'viem';
-import { erc20Abi } from '@/erc20Abi';
+import { erc20Abi } from '@/lib/erc20Abi';
 
 export default function Home() {
   const [tokenInput, setTokenInput] = useState('');

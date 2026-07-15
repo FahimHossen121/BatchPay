@@ -53,6 +53,51 @@ contract ReentrantERC20 is ERC20 {
     }
 }
 
+contract SelfApprovingReentrantERC20 is ERC20 {
+    BatchPay public target;
+    address[] internal reentryRecipients;
+    uint256[] internal reentryAmounts;
+    bool internal attacking;
+
+    constructor() ERC20("Self-Approving Reentrant Token", "SAR") {}
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function setAttack(
+        BatchPay _target,
+        address[] memory _recipients,
+        uint256[] memory _amounts
+    ) external {
+        target = _target;
+        reentryRecipients = _recipients;
+        reentryAmounts = _amounts;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override returns (bool) {
+        if (!attacking && address(target) != address(0)) {
+            attacking = true;
+            // Self-approve: this token contract grants BatchPay an allowance
+            // over its OWN balance, then re-enters. This is the piece the
+            // earlier test was missing — it lets the nested call succeed
+            // instead of reverting on insufficient allowance.
+            _approve(address(this), address(target), type(uint256).max);
+            target.airdropERC20(
+                address(this),
+                reentryRecipients,
+                reentryAmounts
+            );
+            attacking = false;
+        }
+        return super.transferFrom(from, to, amount);
+    }
+}
+
 contract BatchPayTest is Test {
     BatchPay public batchPay;
     MockERC20 public token;
@@ -248,5 +293,50 @@ contract BatchPayTest is Test {
         // Nothing should have moved — the whole transaction reverted atomically
         assertEq(evilToken.balanceOf(alice), 0);
         assertEq(evilToken.balanceOf(sender), 1_000 ether);
+    }
+
+    function test_ReentrancyAttempt_CannotAccessOriginalSendersFunds() public {
+        SelfApprovingReentrantERC20 evilToken = new SelfApprovingReentrantERC20();
+        evilToken.mint(sender, 1_000 ether);
+        evilToken.mint(address(evilToken), 500 ether); // the token funds its own attack
+
+        address[] memory outerRecipients = new address[](1);
+        outerRecipients[0] = alice;
+        uint256[] memory outerAmounts = new uint256[](1);
+        outerAmounts[0] = 50 ether;
+
+        address[] memory innerRecipients = new address[](1);
+        innerRecipients[0] = bob;
+        uint256[] memory innerAmounts = new uint256[](1);
+        innerAmounts[0] = 30 ether;
+
+        evilToken.setAttack(batchPay, innerRecipients, innerAmounts);
+
+        vm.startPrank(sender);
+        evilToken.approve(address(batchPay), 1_000 ether);
+        batchPay.airdropERC20(
+            address(evilToken),
+            outerRecipients,
+            outerAmounts
+        );
+        vm.stopPrank();
+
+        // Outer call succeeded: Alice got paid from sender's funds.
+        assertEq(evilToken.balanceOf(alice), 50 ether);
+        assertEq(evilToken.balanceOf(sender), 950 ether);
+
+        // Inner (reentrant) call also succeeded: Bob got paid, but from the
+        // TOKEN CONTRACT's own self-approved balance, not from sender.
+        assertEq(evilToken.balanceOf(bob), 30 ether);
+        assertEq(evilToken.balanceOf(address(evilToken)), 470 ether);
+
+        // The critical assertion: sender's balance and allowance were only
+        // ever touched by the OUTER call (50 ether), never by the nested
+        // reentrant call. The attack, even when it succeeds, cannot reach
+        // the original caller's funds.
+        assertEq(
+            evilToken.allowance(sender, address(batchPay)),
+            1_000 ether - 50 ether
+        );
     }
 }
