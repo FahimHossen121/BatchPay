@@ -69,4 +69,4 @@ up: anvil-start deploy test
 down: anvil-stop
 
 frontend:
-	@cd front
+	@cd frontend && npm run dev
