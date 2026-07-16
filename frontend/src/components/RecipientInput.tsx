@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { parsePairedInput, parseCombinedInput, type ParsedEntry } from '@/lib/parseRecipients';
 
 type Mode = 'paired' | 'combined';
@@ -25,7 +25,7 @@ export function RecipientInput({
     }
   }, [mode, recipientsText, amountsText, combinedText]);
 
-  useMemo(() => {
+  useEffect(() => {
     onValidEntries(result?.success ? result.entries : null);
   }, [result, onValidEntries]);
 
@@ -40,18 +40,29 @@ export function RecipientInput({
     setMode(next);
   }
 
+  const modeButtonClass =
+    'rounded-md border px-3 py-1 transition-colors hover:bg-[var(--color-bg-secondary)]';
+  const activeModeButtonClass =
+    'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-foreground)]';
+  const inactiveModeButtonClass =
+    'border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]';
+  const inputClass =
+    'rounded-md border bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-accent)]';
+
   return (
-    <div className="flex flex-col gap-3 w-96">
+    <div className="flex w-full max-w-96 flex-col gap-3">
       <div className="flex gap-2 text-sm">
         <button
+          type="button"
           onClick={() => switchMode('paired')}
-          className={`px-3 py-1 rounded ${mode === 'paired' ? 'bg-black text-white' : 'bg-gray-200'}`}
+          className={`${modeButtonClass} ${mode === 'paired' ? activeModeButtonClass : inactiveModeButtonClass}`}
         >
           Paired lists
         </button>
         <button
+          type="button"
           onClick={() => switchMode('combined')}
-          className={`px-3 py-1 rounded ${mode === 'combined' ? 'bg-black text-white' : 'bg-gray-200'}`}
+          className={`${modeButtonClass} ${mode === 'combined' ? activeModeButtonClass : inactiveModeButtonClass}`}
         >
           Combined (address,amount)
         </button>
@@ -63,13 +74,13 @@ export function RecipientInput({
             placeholder={'Recipients — one per line or comma-separated\n0xABC...\n0xDEF...'}
             value={recipientsText}
             onChange={(e) => setRecipientsText(e.target.value)}
-            className="border rounded px-3 py-2 text-sm h-28"
+            className={`${inputClass} h-28`}
           />
           <textarea
             placeholder={'Amounts — same order as recipients\n5.5\n10'}
             value={amountsText}
             onChange={(e) => setAmountsText(e.target.value)}
-            className="border rounded px-3 py-2 text-sm h-28"
+            className={`${inputClass} h-28`}
           />
         </>
       ) : (
@@ -77,15 +88,15 @@ export function RecipientInput({
           placeholder={'One per line: address,amount\n0xABC...,5.5\n0xDEF...,10'}
           value={combinedText}
           onChange={(e) => setCombinedText(e.target.value)}
-          className="border rounded px-3 py-2 text-sm h-40"
+          className={`${inputClass} h-40`}
         />
       )}
 
       {result && !result.success && (
-        <p className="text-sm text-red-500">{result.error}</p>
+        <p className="text-sm text-[var(--color-error)]">{result.error}</p>
       )}
       {result && result.success && (
-        <p className="text-sm text-green-600">
+        <p className="text-sm text-[var(--color-success)]">
           {result.entries.length} recipient{result.entries.length !== 1 ? 's' : ''} parsed successfully.
         </p>
       )}

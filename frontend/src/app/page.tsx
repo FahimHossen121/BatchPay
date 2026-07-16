@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useReadContracts } from 'wagmi';
 import { isAddress } from 'viem';
 import { erc20Abi } from '@/lib/erc20Abi';
@@ -28,27 +27,27 @@ export default function Home() {
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
       <h1 className="text-2xl font-semibold">BatchPay</h1>
-      <p className="text-sm text-gray-500">Gas-efficient ERC20 batch transfer</p>
-      <ConnectButton />
+      <p className="text-sm text-[var(--color-text-secondary)]">Gas-efficient ERC20 batch transfer</p>
 
       <input
         type="text"
         placeholder="Token address (0x...)"
         value={tokenInput}
         onChange={(e) => setTokenInput(e.target.value)}
-        className="border rounded px-3 py-2 w-96 text-sm"
+        className="w-full max-w-96 rounded-md border bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-accent)]"
+        style={{ borderColor: 'var(--color-border)' }}
       />
 
       {tokenInput && !tokenAddress && (
-        <p className="text-sm text-red-500">This doesn&apos;t look like a valid address.</p>
+        <p className="text-sm text-[var(--color-error)]">This doesn&apos;t look like a valid address.</p>
       )}
 
       {tokenAddress && isLoading && (
-        <p className="text-sm text-gray-500">Loading token info...</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">Loading token info...</p>
       )}
 
       {tokenAddress && isError && (
-        <p className="text-sm text-red-500">
+        <p className="text-sm text-[var(--color-error)]">
           This doesn&apos;t look like a valid ERC20 token.
         </p>
       )}
@@ -57,13 +56,13 @@ export default function Home() {
         <>
           <div className="text-sm text-center">
             <p className="font-medium">{name.result} ({symbol.result})</p>
-            <p className="text-gray-500">Decimals: {decimals.result}</p>
+            <p className="text-[var(--color-text-secondary)]">Decimals: {decimals.result}</p>
           </div>
 
           <RecipientInput onValidEntries={setEntries} />
 
           {entries && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               Ready to preview {entries.length} recipient{entries.length !== 1 ? 's' : ''}.
             </p>
           )}
