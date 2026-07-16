@@ -30,3 +30,50 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
 }
+
+.navbar-icon-button {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  color: var(--color-text-secondary);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.navbar-icon-button:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+.mode-button {
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  padding: 0.25rem 0.75rem;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.mode-button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.mode-button[data-active="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+.mode-button[data-active="true"]:hover {
+  background: var(--color-accent-hover);
+  color: var(--color-accent-foreground);
+}

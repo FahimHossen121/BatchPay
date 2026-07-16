@@ -2,12 +2,11 @@
 
 import '@rainbow-me/rainbowkit/styles.css';
 import { darkTheme, lightTheme, RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
+import { cookieToInitialState, type State, WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { ThemeProvider, useTheme } from 'next-themes';
 import { config } from '@/rainbowKitConfig';
-
-const queryClient = new QueryClient();
 
 const rainbowKitTheme = {
   lightMode: lightTheme({
@@ -26,16 +25,28 @@ const rainbowKitTheme = {
   }),
 };
 
-function WalletProviders({ children }: { children: React.ReactNode }) {
+function WalletProviders({
+  children,
+  initialState,
+}: {
+  children: React.ReactNode;
+  initialState: State | undefined;
+}) {
   const { resolvedTheme } = useTheme();
+  const [queryClient] = useState(() => new QueryClient());
+  const [mounted, setMounted] = useState(false);
+  const rainbowKitThemeMode =
+    mounted && resolvedTheme === 'light' ? rainbowKitTheme.lightMode : rainbowKitTheme.darkMode;
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={config} initialState={initialState}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          modalSize="compact"
-          theme={resolvedTheme === 'light' ? rainbowKitTheme.lightMode : rainbowKitTheme.darkMode}
-        >
+        <RainbowKitProvider modalSize="compact" theme={rainbowKitThemeMode}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
@@ -43,10 +54,18 @@ function WalletProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  wagmiCookie,
+}: {
+  children: React.ReactNode;
+  wagmiCookie: string | null;
+}) {
+  const [initialState] = useState(() => cookieToInitialState(config, wagmiCookie));
+
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-      <WalletProviders>{children}</WalletProviders>
+      <WalletProviders initialState={initialState}>{children}</WalletProviders>
     </ThemeProvider>
   );
 }

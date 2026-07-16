@@ -40,12 +40,6 @@ export function RecipientInput({
     setMode(next);
   }
 
-  const modeButtonClass =
-    'rounded-md border px-3 py-1 transition-colors hover:bg-[var(--color-bg-secondary)]';
-  const activeModeButtonClass =
-    'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-foreground)]';
-  const inactiveModeButtonClass =
-    'border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]';
   const inputClass =
     'rounded-md border bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-accent)]';
 
@@ -55,14 +49,16 @@ export function RecipientInput({
         <button
           type="button"
           onClick={() => switchMode('paired')}
-          className={`${modeButtonClass} ${mode === 'paired' ? activeModeButtonClass : inactiveModeButtonClass}`}
+          className="mode-button"
+          data-active={mode === 'paired'}
         >
           Paired lists
         </button>
         <button
           type="button"
           onClick={() => switchMode('combined')}
-          className={`${modeButtonClass} ${mode === 'combined' ? activeModeButtonClass : inactiveModeButtonClass}`}
+          className="mode-button"
+          data-active={mode === 'combined'}
         >
           Combined (address,amount)
         </button>
