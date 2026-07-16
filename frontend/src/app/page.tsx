@@ -5,9 +5,12 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useReadContracts } from 'wagmi';
 import { isAddress } from 'viem';
 import { erc20Abi } from '@/lib/erc20Abi';
+import { RecipientInput } from '@/components/RecipientInput';
+import type { ParsedEntry } from '@/lib/parseRecipients';
 
 export default function Home() {
   const [tokenInput, setTokenInput] = useState('');
+  const [entries, setEntries] = useState<ParsedEntry[] | null>(null);
 
   const tokenAddress = isAddress(tokenInput) ? tokenInput : undefined;
 
@@ -51,10 +54,20 @@ export default function Home() {
       )}
 
       {tokenAddress && name?.result && symbol?.result && decimals?.result !== undefined && (
-        <div className="text-sm text-center">
-          <p className="font-medium">{name.result} ({symbol.result})</p>
-          <p className="text-gray-500">Decimals: {decimals.result}</p>
-        </div>
+        <>
+          <div className="text-sm text-center">
+            <p className="font-medium">{name.result} ({symbol.result})</p>
+            <p className="text-gray-500">Decimals: {decimals.result}</p>
+          </div>
+
+          <RecipientInput onValidEntries={setEntries} />
+
+          {entries && (
+            <p className="text-sm text-gray-500">
+              Ready to preview {entries.length} recipient{entries.length !== 1 ? 's' : ''}.
+            </p>
+          )}
+        </>
       )}
     </main>
   );
