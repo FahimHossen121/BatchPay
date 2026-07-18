@@ -1,7 +1,7 @@
 # BatchPay — local dev automation
 # Run `make help` to see available commands.
 
-ACCOUNT := anvilAccount
+ACCOUNT := anvilAccountV2
 SENDER := 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 RPC_URL := http://127.0.0.1:8545
 ANVIL_LOG := /tmp/batchpay-anvil.log

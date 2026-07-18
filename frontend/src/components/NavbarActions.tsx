@@ -59,7 +59,6 @@ export function NavbarActions() {
         className={`absolute left-0 right-0 top-full z-20 grid overflow-hidden border-b bg-[var(--color-bg)] transition-[grid-template-rows,opacity] duration-200 ease-out sm:hidden ${
           menuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
         }`}
-        style={{ borderColor: 'var(--color-border)' }}
       >
         <div className="min-h-0">
           <div className="mx-auto flex max-w-5xl justify-end px-4 py-3">
